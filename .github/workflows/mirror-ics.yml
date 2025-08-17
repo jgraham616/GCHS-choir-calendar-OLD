@@ -1,0 +1,34 @@
+name: Mirror ICS (daily)
+
+on:
+  schedule:
+    # Runs at 12:00 UTC daily (8:00 AM Eastern during Daylight Saving; 7:00 AM Eastern otherwise)
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # allow this workflow to push commits
+
+jobs:
+  fetch-ics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Download ICS
+        run: |
+          mkdir -p calendar
+          curl -fsSL "https://calendar.google.com/calendar/ical/swcsd.us_qufbvonhii616sc9n6mh1uu7l8%40group.calendar.google.com/public/basic.ics" -o calendar/basic.ics
+
+      - name: Commit if changed
+        run: |
+          git config user.name "calendar-bot"
+          git config user.email "calendar-bot@users.noreply.github.com"
+          git add calendar/basic.ics
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: update ICS ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
+            git push
+          fi
